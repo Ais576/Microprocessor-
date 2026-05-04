@@ -1,0 +1,110 @@
+;X86/64 ALP for 5-digit BCD to HEX conversion
+section .data
+    msg1 db "Enter 5-digit BCD Number: ", 0
+    len1 equ $-msg1
+    msg2 db 10, "Equivalent HEX Number: ", 0
+    len2 equ $-msg2
+    newline db 10
+    
+section .bss
+    bcd_input resb 6       ; 5 digits + 1 byte for the Enter key
+    hex_output resb 8      ; To store the 8 ASCII hex characters to print
+
+section .text
+    global _start
+
+_start:
+    ; ----------------------------------------------------
+    ; 1. Print the input message
+    ; ----------------------------------------------------
+    mov rax, 1             ; sys_write
+    mov rdi, 1             ; stdout
+    mov rsi, msg_in        ; pointer to message
+    mov rdx, len_in        ; message length
+    syscall
+
+    ; ----------------------------------------------------
+    ; 2. Read the 5-digit BCD from the user
+    ; ----------------------------------------------------
+    mov rax, 0             ; sys_read
+    mov rdi, 0             ; stdin
+    mov rsi, bcd_input     ; pointer to buffer
+    mov rdx, 6             ; read 5 characters + newline
+    syscall
+
+    ; ----------------------------------------------------
+    ; 3. Convert 5-digit BCD (ASCII) to Hex/Binary (in RAX)
+    ; ----------------------------------------------------
+    mov rsi, bcd_input     ; Point RSI to the start of our input string
+    mov rcx, 5             ; We will process exactly 5 digits
+    xor rax, rax           ; RAX will hold our final accumulated result (start at 0)
+    mov rbx, 10            ; Multiplier (Base 10)
+
+convert_loop:
+    mul rbx                ; RAX = RAX * 10
+    
+    xor r8, r8             ; Clear R8 register
+    mov r8b, byte [rsi]    ; Load the current ASCII character into R8 lower byte
+    sub r8b, 30h           ; Convert ASCII ('0'-'9') to actual value (0-9)
+    
+    add rax, r8            ; Add the digit to our total accumulator
+    inc rsi                ; Move to the next character in the string
+    loop convert_loop      ; Decrement RCX and loop until RCX is 0
+
+    ; ----------------------------------------------------
+    ; 4. Print the output message
+    ; ----------------------------------------------------
+    mov r9, rax            ; Safely store our calculated Hex value in R9
+                           ; (sys_write will overwrite RAX)
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, msg_out
+    mov rdx, len_out
+    syscall
+
+    ; ----------------------------------------------------
+    ; 5. Convert Hex/Binary value to ASCII string for printing
+    ;    (A 5-digit max BCD is 99999, which is 0x1869F. 
+    ;    It fits perfectly in a 32-bit register, printed as 8 hex chars).
+    ; ----------------------------------------------------
+    mov rbx, r9            ; Move our result into RBX for manipulation
+    mov rcx, 8             ; We will print 8 hex digits (32 bits)
+    mov rdi, hex_output    ; Pointer to output buffer
+
+hex_to_ascii_loop:
+    rol ebx, 4             ; Rotate left 4 bits to bring the highest nibble to lowest position
+    mov al, bl             ; Copy the lowest byte to AL
+    and al, 0x0F           ; Mask out everything except the lowest 4 bits (nibble)
+    
+    cmp al, 09h            ; Check if the digit is 0-9 or A-F
+    jbe add_30h
+    add al, 07h            ; If it's A-F, add an extra 7 to bridge the ASCII gap
+
+add_30h:
+    add al, 30h            ; Add 30h to convert to final ASCII character
+    mov [rdi], al          ; Store the ASCII character in our output buffer
+    inc rdi                ; Move to next byte in buffer
+    loop hex_to_ascii_loop ; Repeat for all 8 nibbles
+
+    ; ----------------------------------------------------
+    ; 6. Print the Hex Result
+    ; ----------------------------------------------------
+    mov rax, 1             ; sys_write
+    mov rdi, 1             ; stdout
+    mov rsi, hex_output    ; pointer to hex ASCII string
+    mov rdx, 8             ; print 8 characters
+    syscall
+
+    ; Print a newline for neatness
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, newline
+    mov rdx, 1
+    syscall
+
+    ; ----------------------------------------------------
+    ; 7. Exit Program
+    ; ----------------------------------------------------
+    mov rax, 60            ; sys_exit
+    xor rdi, rdi           ; exit code 0
+    syscall
