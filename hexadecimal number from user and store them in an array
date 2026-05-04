@@ -1,0 +1,88 @@
+;write an x86/64 Alp 
+section .data
+	msg1 db 10,13,"Enter 5 64 bit Numbers"
+	len1 equ $-msg1
+	msg2 db 10,13,"Enter 5 64 bit Numbers"
+	len2 equ $-msg2
+section .bss
+	array resd 200
+	counter resb 1
+section .text
+	global _start 
+_start: 
+	;display
+	MOV RAX,1
+	MoV RDI,1
+	MOV RSI,msg1
+	MOV RDX,len1
+	syscall
+	;accept 
+	MOV byte[counter],05
+	MOV EBX,00
+	loop1:
+		MOV EAX,0
+		MOV EDI,0
+		MOV ESI, array 
+		add ESI,EBX
+		MOV RDX,17
+		syscall
+		add EBX,17
+		dec byte[counter]
+		JNZ loop1
+	;display
+	MOV RAX,1
+	MOV RDI,1
+	MOV RSI,msg2
+	MOV RDX,len2
+	syscall
+	MOV byte[counter],05
+	MOV EBX,00
+	loop2:
+		MOV EAX,1
+		MOV EDI,1
+		MOV ESI,array
+		add ESI,EBX
+		MOV EDX,17
+		syscall
+		add EBX,17
+		dec byte[counter]
+		JNZ loop2 
+	;exit system call
+	MOV EAX,60
+	MOV EDI,0
+	syscall
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+   
+   
+   
+   
